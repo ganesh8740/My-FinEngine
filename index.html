@@ -1,0 +1,2606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes" />
+    <title>Fin Engine – Finance Model</title>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js">
+    </script>
+    <!-- SheetJS for Excel export -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js">
+    </script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <style>
+        /* ───────────── CSS Variables / Reset ───────────── */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+        :root {
+            --bg: #f4f6fa;
+            --card: #ffffff;
+            --text: #1a1a2e;
+            --text2: #4a4a6a;
+            --border: #e2e6ee;
+            --shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+            --radius: 16px;
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --green: #22c55e;
+            --red: #ef4444;
+            --orange: #f59e0b;
+            --blue: #3b82f6;
+            --sky: #38bdf8;
+            --input-bg: #f8fafc;
+            --header-bg: #ffffff;
+            --tab-active: #4f46e5;
+            --tab-inactive: #94a3b8;
+            --table-stripe: #f8fafc;
+            --modal-overlay: rgba(0, 0, 0, 0.4);
+            --badge-paid: #dcfce7;
+            --badge-active: #fef3c7;
+            --stat-label: #64748b;
+            --stat-value: #0f172a;
+            --card-bg: #ffffff;
+            --stat-shadow: 0 4px 20px rgba(0,0,0,0.06);
+        }
+        .dark {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f1f5f9;
+            --text2: #cbd5e1;
+            --border: #334155;
+            --shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            --input-bg: #1e293b;
+            --header-bg: #1e293b;
+            --tab-active: #818cf8;
+            --tab-inactive: #64748b;
+            --table-stripe: #1e293b;
+            --modal-overlay: rgba(0, 0, 0, 0.7);
+            --badge-paid: #065f46;
+            --badge-active: #78350f;
+            --stat-label: #94a3b8;
+            --stat-value: #f1f5f9;
+            --card-bg: #1e293b;
+            --stat-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            transition: background 0.3s, color 0.3s;
+            min-height: 100vh;
+            padding-bottom: 80px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        /* ───────────── SCROLLBAR ───────────── */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 8px;
+        }
+
+        /* ───────────── HEADER ───────────── */
+        .app-header {
+            background: var(--header-bg);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            transition: background 0.3s, border 0.3s;
+        }
+        .app-header .logo {
+            font-weight: 700;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text);
+        }
+        .app-header .logo i {
+            color: var(--primary);
+            font-size: 22px;
+        }
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .header-actions button {
+            background: var(--card);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 10px;
+            padding: 7px 12px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: 500;
+        }
+        .header-actions button:hover {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+        .header-actions button i {
+            font-size: 14px;
+        }
+        .theme-toggle {
+            background: var(--card) !important;
+            border-radius: 50% !important;
+            width: 38px;
+            height: 38px;
+            padding: 0 !important;
+            justify-content: center;
+            font-size: 16px;
+        }
+        .theme-toggle:hover {
+            background: var(--primary) !important;
+            color: #fff !important;
+        }
+
+        /* ───────────── TAB NAV ───────────── */
+        .tab-nav {
+            display: flex;
+            overflow-x: auto;
+            gap: 4px;
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+            padding: 6px 12px;
+            position: sticky;
+            top: 64px;
+            z-index: 99;
+            transition: background 0.3s, border 0.3s;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+        .tab-nav::-webkit-scrollbar {
+            display: none;
+        }
+        .tab-nav button {
+            flex: 0 0 auto;
+            padding: 8px 16px;
+            border: none;
+            background: transparent;
+            color: var(--tab-inactive);
+            font-weight: 600;
+            font-size: 13px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: 0.2s;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .tab-nav button i {
+            font-size: 14px;
+        }
+        .tab-nav button.active {
+            background: var(--primary);
+            color: #fff;
+        }
+        .tab-nav button:hover:not(.active) {
+            background: var(--border);
+            color: var(--text);
+        }
+
+        /* ───────────── MAIN CONTAINER ───────────── */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+
+        /* ───────────── TAB CONTENT ───────────── */
+        .tab-content {
+            display: none;
+            animation: fadeUp 0.3s ease;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ───────────── CARDS ───────────── */
+        .card {
+            background: var(--card);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            padding: 16px;
+            margin-bottom: 16px;
+            transition: background 0.3s, border 0.3s, box-shadow 0.3s;
+            box-shadow: var(--shadow);
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .card-header h3 {
+            font-size: 16px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card-header h3 i {
+            color: var(--primary);
+        }
+        .card-actions {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .card-actions button {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 8px;
+            padding: 5px 10px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .card-actions button:hover {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+        .card-actions button.danger:hover {
+            background: var(--red);
+            border-color: var(--red);
+        }
+        .card-actions button.success:hover {
+            background: var(--green);
+            border-color: var(--green);
+        }
+        .card-actions select {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 8px;
+            padding: 5px 8px;
+            font-size: 12px;
+            outline: none;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .card-actions select:focus {
+            border-color: var(--primary);
+        }
+        .card-actions select:hover {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+        /* ───────────── STAT CARDS ───────────── */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .stat-card {
+            background: var(--card-bg);
+            border-radius: 14px;
+            padding: 16px 18px;
+            box-shadow: var(--stat-shadow);
+            border: 1px solid var(--border);
+            transition: all 0.25s ease;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            position: relative;
+            min-height: 80px;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+        }
+        .dark .stat-card:hover {
+            box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+        }
+        .stat-card .stat-icon-wrap {
+            flex-shrink: 0;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #fff;
+            transition: transform 0.2s;
+        }
+        .stat-card:hover .stat-icon-wrap {
+            transform: scale(1.05);
+        }
+        .stat-card .stat-icon-wrap.income {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+        }
+        .stat-card .stat-icon-wrap.expenses {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+        .stat-card .stat-icon-wrap.net {
+            background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+        }
+        .stat-card .stat-icon-wrap.investments {
+            background: linear-gradient(135deg, #f97316, #ea580c);
+        }
+        .stat-card .stat-icon-wrap.returns {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+        }
+        .stat-card .stat-icon-wrap.pnl {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+        }
+        .stat-card .stat-icon-wrap.loans {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+        }
+        .stat-card .stat-icon-wrap.repaid {
+            background: linear-gradient(135deg, #14b8a6, #0d9488);
+        }
+        .stat-card .stat-content {
+            flex: 1;
+            min-width: 0;
+        }
+        .stat-card .stat-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--stat-label);
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+        .stat-card .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--stat-value);
+            line-height: 1.2;
+        }
+        .stat-card .stat-value.green {
+            color: var(--green);
+        }
+        .stat-card .stat-value.red {
+            color: var(--red);
+        }
+        .stat-card .stat-value.blue {
+            color: var(--blue);
+        }
+        .stat-card .stat-value.orange {
+            color: var(--orange);
+        }
+        .stat-card .stat-value.sky {
+            color: var(--sky);
+        }
+        .stat-card.highlight {
+            border: 1px solid var(--border);
+            background: var(--card-bg);
+            box-shadow: var(--stat-shadow);
+        }
+        .dark .stat-card.highlight {
+            border: 1px solid var(--border);
+            background: var(--card-bg);
+            box-shadow: var(--stat-shadow);
+        }
+        .stat-card.highlight .stat-value {
+            color: var(--sky);
+            font-size: 20px;
+        }
+        .stat-card.highlight .stat-label {
+            color: var(--stat-label);
+        }
+
+        /* ───────────── DATE RANGE ───────────── */
+        .date-range {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .date-range label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text2);
+        }
+        .date-range input[type="date"] {
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 8px;
+            padding: 6px 10px;
+            font-size: 13px;
+            outline: none;
+            transition: 0.2s;
+        }
+        .date-range input[type="date"]:focus {
+            border-color: var(--primary);
+        }
+        .date-range button {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 6px 14px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: 500;
+        }
+        .date-range button:hover {
+            background: var(--primary-hover);
+        }
+
+        /* ───────────── TABLE ───────────── */
+        .table-wrap {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin-top: 8px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            min-width: 800px;
+        }
+        thead {
+            background: var(--bg);
+            border-bottom: 2px solid var(--border);
+        }
+        th {
+            text-align: left;
+            padding: 10px 12px;
+            font-weight: 600;
+            color: var(--text2);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+        }
+        td {
+            padding: 9px 12px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+        tbody tr:nth-child(even) {
+            background: var(--table-stripe);
+        }
+        tbody tr:hover {
+            background: var(--border);
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .badge-paid {
+            background: var(--badge-paid);
+            color: #065f46;
+        }
+        .badge-active {
+            background: var(--badge-active);
+            color: #78350f;
+        }
+        .badge-income {
+            background: #dcfce7;
+            color: #065f46;
+        }
+        .badge-expense {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .dark .badge-income {
+            background: #065f46;
+            color: #dcfce7;
+        }
+        .dark .badge-expense {
+            background: #7f1f1d;
+            color: #fee2e2;
+        }
+        .dark .badge-paid {
+            background: #065f46;
+            color: #dcfce7;
+        }
+        .dark .badge-active {
+            background: #78350f;
+            color: #fef3c7;
+        }
+
+        .table-actions {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+        .table-actions button {
+            background: transparent;
+            border: none;
+            color: var(--text2);
+            cursor: pointer;
+            padding: 4px 6px;
+            border-radius: 6px;
+            transition: 0.2s;
+            font-size: 13px;
+        }
+        .table-actions button:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+        .table-actions button.danger:hover {
+            background: var(--red);
+        }
+        .table-actions button.success:hover {
+            background: var(--green);
+        }
+
+        /* ───────────── CHARTS ───────────── */
+        .chart-container {
+            position: relative;
+            height: 220px;
+            margin-top: 8px;
+        }
+        .chart-container.tall {
+            height: 260px;
+        }
+        .chart-container.small {
+            height: 180px;
+        }
+        .chart-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+        @media (min-width: 768px) {
+            .chart-grid.two-col {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        /* ───────────── FORMS (Add / Edit) ───────────── */
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: end;
+            margin-bottom: 10px;
+        }
+        .form-row .field {
+            flex: 1 1 140px;
+            min-width: 120px;
+        }
+        .form-row .field label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text2);
+            margin-bottom: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .form-row .field input,
+        .form-row .field select {
+            width: 100%;
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 8px;
+            padding: 7px 10px;
+            font-size: 13px;
+            outline: none;
+            transition: 0.2s;
+        }
+        .form-row .field input:focus,
+        .form-row .field select:focus {
+            border-color: var(--primary);
+        }
+        .form-row .field input[type="date"] {
+            padding: 6px 10px;
+        }
+        .form-row .btn-add {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 7px 18px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            white-space: nowrap;
+        }
+        .form-row .btn-add:hover {
+            background: var(--primary-hover);
+        }
+        .form-row .btn-add i {
+            margin-right: 4px;
+        }
+
+        /* ───────────── MODAL ───────────── */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--modal-overlay);
+            z-index: 999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .modal-overlay.open {
+            display: flex;
+        }
+        .modal-box {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 24px;
+            max-width: 480px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.2);
+            animation: fadeUp 0.25s ease;
+        }
+        .modal-box h4 {
+            font-size: 18px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .modal-box h4 i {
+            color: var(--primary);
+        }
+        .modal-box .form-row .field {
+            flex: 1 1 100%;
+        }
+        .modal-box .modal-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+            justify-content: flex-end;
+        }
+        .modal-box .modal-actions button {
+            padding: 8px 20px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .modal-box .modal-actions .btn-primary {
+            background: var(--primary);
+            color: #fff;
+        }
+        .modal-box .modal-actions .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+        .modal-box .modal-actions .btn-secondary {
+            background: var(--border);
+            color: var(--text);
+        }
+        .modal-box .modal-actions .btn-secondary:hover {
+            background: var(--text2);
+            color: #fff;
+        }
+
+        /* ───────────── TOAST ───────────── */
+        .toast {
+            position: fixed;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--card);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 10px 24px;
+            border-radius: 30px;
+            font-weight: 500;
+            font-size: 14px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            max-width: 90%;
+        }
+        .toast.show {
+            opacity: 1;
+        }
+        .toast.success {
+            border-left: 4px solid var(--green);
+        }
+        .toast.error {
+            border-left: 4px solid var(--red);
+        }
+
+        /* ───────────── RESPONSIVE ───────────── */
+        @media (max-width: 480px) {
+            .app-header .logo {
+                font-size: 15px;
+            }
+            .app-header .logo i {
+                font-size: 18px;
+            }
+            .header-actions button {
+                padding: 5px 8px;
+                font-size: 12px;
+            }
+            .header-actions button span {
+                display: none;
+            }
+            .theme-toggle {
+                width: 34px !important;
+                height: 34px !important;
+            }
+            .tab-nav button {
+                font-size: 12px;
+                padding: 6px 12px;
+            }
+            .tab-nav button i {
+                font-size: 12px;
+            }
+            .stat-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+            .stat-card {
+                padding: 12px 14px;
+                gap: 10px;
+                min-height: 68px;
+            }
+            .stat-card .stat-icon-wrap {
+                width: 36px;
+                height: 36px;
+                font-size: 14px;
+            }
+            .stat-card .stat-value {
+                font-size: 16px;
+            }
+            .stat-card.highlight .stat-value {
+                font-size: 16px;
+            }
+            .stat-card .stat-label {
+                font-size: 9px;
+            }
+            .card {
+                padding: 12px;
+            }
+            .form-row .field {
+                flex: 1 1 100%;
+                min-width: unset;
+            }
+            .chart-container {
+                height: 180px;
+            }
+            .chart-container.tall {
+                height: 200px;
+            }
+            .chart-container.small {
+                height: 150px;
+            }
+            .modal-box {
+                padding: 16px;
+                margin: 8px;
+            }
+            .date-range input[type="date"] {
+                width: 100%;
+            }
+            .date-range {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .table-wrap {
+                font-size: 12px;
+            }
+            th,
+            td {
+                padding: 6px 8px;
+            }
+            .card-actions select {
+                font-size: 10px;
+                padding: 4px 6px;
+                max-width: 130px;
+            }
+            table {
+                min-width: 700px;
+            }
+        }
+        @media (min-width: 768px) {
+            .stat-grid {
+                grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            }
+        }
+
+        /* ───────────── EMPTY STATE ───────────── */
+        .empty-state {
+            text-align: center;
+            padding: 30px 10px;
+            color: var(--text2);
+        }
+        .empty-state i {
+            font-size: 40px;
+            color: var(--border);
+            margin-bottom: 8px;
+            display: block;
+        }
+        .empty-state p {
+            font-size: 14px;
+        }
+
+        /* ───────────── MISC ───────────── */
+        .text-green {
+            color: var(--green);
+        }
+        .text-red {
+            color: var(--red);
+        }
+        .text-blue {
+            color: var(--blue);
+        }
+        .text-orange {
+            color: var(--orange);
+        }
+        .text-sky {
+            color: var(--sky);
+        }
+        .fw-700 {
+            font-weight: 700;
+        }
+        .mt-8 {
+            margin-top: 8px;
+        }
+        .mb-8 {
+            margin-bottom: 8px;
+        }
+        .flex-between {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .gap-4 {
+            gap: 4px;
+        }
+        .gap-8 {
+            gap: 8px;
+        }
+        .truncate {
+            max-width: 120px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .table-scroll {
+            max-height: 340px;
+            overflow-y: auto;
+            overflow-x: auto;
+        }
+        .table-scroll table {
+            min-width: 800px;
+        }
+        .table-scroll thead {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            background: var(--bg);
+        }
+        .dark .table-scroll thead {
+            background: var(--bg);
+        }
+        .loan-stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin: 8px 0 12px 0;
+            font-size: 13px;
+        }
+        .loan-stat-item {
+            text-align: center;
+            padding: 6px 10px;
+            background: var(--bg);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        .loan-stat-item strong {
+            display: block;
+            font-size: 16px;
+            color: var(--text);
+        }
+        .dark .loan-stat-item {
+            background: var(--input-bg);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ─── TOAST ─── -->
+    <div class="toast" id="toast"></div>
+
+    <!-- ─── HEADER ─── -->
+    <header class="app-header">
+        <div class="logo"><i class="fas fa-chart-pie"></i> Fin<span style="color:var(--primary);">Engine</span></div>
+        <div class="header-actions">
+            <button onclick="refreshData()" title="Refresh"><i class="fas fa-sync-alt"></i> <span>Refresh</span></button>
+            <button onclick="saveToLocal()" title="Save"><i class="fas fa-save"></i> <span>Save</span></button>
+            <button onclick="exportExcel()" title="Export Excel"><i class="fas fa-file-excel"></i> <span>Excel</span></button>
+            <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme"><i class="fas fa-moon" id="themeIcon"></i></button>
+        </div>
+    </header>
+
+    <!-- ─── TAB NAV ─── -->
+    <nav class="tab-nav" id="tabNav">
+        <button class="active" data-tab="dashboard"><i class="fas fa-th-large"></i> Dashboard</button>
+        <button data-tab="transactions"><i class="fas fa-exchange-alt"></i> Transactions</button>
+        <button data-tab="expenses"><i class="fas fa-wallet"></i> Expenses</button>
+        <button data-tab="loans"><i class="fas fa-hand-holding-usd"></i> Loans</button>
+        <button data-tab="investments"><i class="fas fa-chart-line"></i> Investments</button>
+        <button data-tab="trading"><i class="fas fa-arrow-trend-up"></i> Trading</button>
+    </nav>
+
+    <!-- ─── MAIN ─── -->
+    <div class="container">
+
+        <!-- ==================== DASHBOARD ==================== -->
+        <div class="tab-content active" id="tab-dashboard">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-calendar-alt"></i> Date Range</h3>
+                </div>
+                <div class="date-range">
+                    <label>From</label>
+                    <input type="date" id="dashDateFrom" />
+                    <label>To</label>
+                    <input type="date" id="dashDateTo" />
+                    <button onclick="updateDashboard()"><i class="fas fa-filter"></i> Apply</button>
+                    <button onclick="resetDashboardDates()" style="background:var(--border);color:var(--text);">Reset</button>
+                </div>
+            </div>
+            <div class="stat-grid" id="dashStats">
+                <div class="stat-card">
+                    <div class="stat-icon-wrap income"><i class="fas fa-arrow-up"></i></div>
+                    <div class="stat-content">
+                        <div class="stat-label">Total Income</div>
+                        <div class="stat-value green" id="dashIncome">0</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon-wrap expenses"><i class="fas fa-arrow-down"></i></div>
+                    <div class="stat-content">
+                        <div class="stat-label">Total Expenses</div>
+                        <div class="stat-value red" id="dashExpenses">0</div>
+                    </div>
+                </div>
+                <div class="stat-card highlight">
+                    <div class="stat-icon-wrap net"><i class="fas fa-balance-scale"></i></div>
+                    <div class="stat-content">
+                        <div class="stat-label">Savings</div>
+                        <div class="stat-value sky" id="dashNet">0</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon-wrap investments"><i class="fas fa-chart-line"></i></div>
+                    <div class="stat-content">
+                        <div class="stat-label">Total Investments</div>
+                        <div class="stat-value orange" id="dashInvest">0</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon-wrap returns"><i class="fas fa-undo-alt"></i></div>
+                    <div class="stat-content">
+                        <div class="stat-label">Total Returns</div>
+                        <div class="stat-value green" id="dashReturns">0</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon-wrap pnl"><i class="fas fa-arrow-trend-up"></i></div>
+                    <div class="stat-content">
+                        <div class="stat-label">Trading P&L</div>
+                        <div class="stat-value" id="dashPnL">0</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon-wrap loans"><i class="fas fa-hand-holding-usd"></i></div>
+                    <div class="stat-content">
+                        <div class="stat-label">Active Loans</div>
+                        <div class="stat-value blue" id="dashLoans">0</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon-wrap repaid"><i class="fas fa-check-circle"></i></div>
+                    <div class="stat-content">
+                        <div class="stat-label">Total Repaid</div>
+                        <div class="stat-value green" id="dashRepaid">0</div>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header"><h3><i class="fas fa-chart-simple"></i> Overview</h3></div>
+                <div class="chart-container tall" style="height:220px;"><canvas id="dashChart"></canvas></div>
+            </div>
+        </div>
+
+        <!-- ==================== TRANSACTIONS ==================== -->
+        <div class="tab-content" id="tab-transactions">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-exchange-alt"></i> Daily Transactions</h3>
+                    <div class="card-actions">
+                        <select id="sortTx" onchange="renderTransactions()">
+                            <option value="date-desc">Newest First</option>
+                            <option value="date-asc">Oldest First</option>
+                            <option value="amount-desc">Amount (High to Low)</option>
+                            <option value="amount-asc">Amount (Low to High)</option>
+                            <option value="alpha-asc">Alphabetical (A–Z)</option>
+                            <option value="alpha-desc">Alphabetical (Z–A)</option>
+                        </select>
+                        <button onclick="openAddModal('transaction')"><i class="fas fa-plus"></i> Add</button>
+                        <button class="danger" onclick="clearSection('transactions')"><i class="fas fa-trash"></i> Clear All</button>
+                    </div>
+                </div>
+                <div class="form-row" id="txForm">
+                    <div class="field"><label>Date</label><input type="date" id="txDate" /></div>
+                    <div class="field"><label>Description</label><input type="text" id="txDesc" placeholder="e.g. Groceries" /></div>
+                    <div class="field"><label>Type</label>
+                        <select id="txType" onchange="updateTxCategoryOptions()">
+                            <option value="income">Income</option>
+                            <option value="expense">Expense</option>
+                        </select>
+                    </div>
+                    <div class="field"><label>Category</label>
+                        <select id="txCategory">
+                            <option value="Salary">Salary</option>
+                            <option value="Freelance">Freelance</option>
+                            <option value="Investment">Investment</option>
+                            <option value="Interest">Interest</option>
+                            <option value="Refund">Refund</option>
+                            <option value="Gift">Gift</option>
+                            <option value="Bonus">Bonus</option>
+                            <option value="Other Income">Other Income</option>
+                        </select>
+                    </div>
+                    <div class="field"><label>Amount</label><input type="number" id="txAmount" placeholder="0.00" step="0.01" /></div>
+                    <button class="btn-add" onclick="addTransaction()"><i class="fas fa-plus"></i> Add</button>
+                </div>
+                <div class="chart-container"><canvas id="txChart"></canvas></div>
+                <div class="table-wrap table-scroll" style="max-height:340px;">
+                    <table><thead><tr><th>Date</th><th>Desc</th><th>Category</th><th>Type</th><th>Amount</th><th style="width:80px;">Actions</th></tr></thead>
+                        <tbody id="txTableBody"></tbody></table>
+                </div>
+                <div style="margin-top:8px;font-size:12px;color:var(--text2);" id="txCount">0 rows</div>
+            </div>
+        </div>
+
+        <!-- ==================== EXPENSES (Bar Chart) ==================== -->
+        <div class="tab-content" id="tab-expenses">
+            <div class="card">
+                <div class="card-header"><h3><i class="fas fa-wallet"></i> Expenses by Category (Budget View)</h3></div>
+                <div class="chart-container tall" style="height:260px;"><canvas id="expChart"></canvas></div>
+                <div style="margin-top:8px;font-size:12px;color:var(--text2);">Total Expenses: <strong id="expTotal">0</strong></div>
+                <div class="table-wrap table-scroll" style="max-height:240px;margin-top:8px;">
+                    <table><thead><tr><th>Category</th><th>Total</th></tr></thead>
+                        <tbody id="expTableBody"></tbody></table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== LOANS ==================== -->
+        <div class="tab-content" id="tab-loans">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-hand-holding-usd"></i> Loans</h3>
+                    <div class="card-actions">
+                        <select id="sortLoan" onchange="renderLoans()">
+                            <option value="date-desc">Newest First</option>
+                            <option value="date-asc">Oldest First</option>
+                            <option value="amount-desc">Amount (High to Low)</option>
+                            <option value="amount-asc">Amount (Low to High)</option>
+                            <option value="alpha-asc">Lender (A–Z)</option>
+                            <option value="alpha-desc">Lender (Z–A)</option>
+                        </select>
+                        <button onclick="openAddModal('loan')"><i class="fas fa-plus"></i> Add</button>
+                        <button class="danger" onclick="clearSection('loans')"><i class="fas fa-trash"></i> Clear All</button>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="field"><label>Lender</label><input type="text" id="loanLender" placeholder="Bank / Person" /></div>
+                    <div class="field"><label>Amount</label><input type="number" id="loanAmount" placeholder="0.00" step="0.01" /></div>
+                    <div class="field"><label>Interest % (p.a.)</label><input type="number" id="loanInterest" placeholder="0" step="0.01" /></div>
+                    <div class="field"><label>Start</label><input type="date" id="loanStart" /></div>
+                    <div class="field"><label>End</label><input type="date" id="loanEnd" /></div>
+                    <button class="btn-add" onclick="addLoan()"><i class="fas fa-plus"></i> Add</button>
+                </div>
+                <!-- Loan summary stats -->
+                <div class="loan-stat-grid" id="loanStats">
+                    <div class="loan-stat-item">Total Loans<br><strong id="loanTotalCount">0</strong></div>
+                    <div class="loan-stat-item">Total Amount<br><strong id="loanTotalAmount">0</strong></div>
+                    <div class="loan-stat-item">Total Repaid<br><strong id="loanTotalRepaid">0</strong></div>
+                    <div class="loan-stat-item">Remaining<br><strong id="loanTotalRemaining">0</strong></div>
+                    <div class="loan-stat-item">Interest Accrued<br><strong id="loanTotalInterest">0</strong></div>
+                </div>
+                <div class="chart-container tall" style="height:280px;"><canvas id="loanLenderChart"></canvas></div>
+                <div class="table-wrap table-scroll" style="max-height:300px;">
+                    <table><thead><tr><th>Lender</th><th>Amount</th><th>Interest</th><th>Start</th><th>End</th><th>Status</th><th>Repaid</th><th>Balance</th><th>Interest Accrued</th><th style="width:100px;">Actions</th></tr></thead>
+                        <tbody id="loanTableBody"></tbody></table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== INVESTMENTS ==================== -->
+        <div class="tab-content" id="tab-investments">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-chart-line"></i> Daily Investments</h3>
+                    <div class="card-actions">
+                        <select id="sortInv" onchange="renderInvestments()">
+                            <option value="date-desc">Newest First</option>
+                            <option value="date-asc">Oldest First</option>
+                            <option value="amount-desc">Investment (High to Low)</option>
+                            <option value="amount-asc">Investment (Low to High)</option>
+                            <option value="alpha-asc">Description (A–Z)</option>
+                            <option value="alpha-desc">Description (Z–A)</option>
+                        </select>
+                        <button onclick="openAddModal('investment')"><i class="fas fa-plus"></i> Add</button>
+                        <button class="danger" onclick="clearSection('investments')"><i class="fas fa-trash"></i> Clear All</button>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="field"><label>Date</label><input type="date" id="invDate" /></div>
+                    <div class="field"><label>Description</label><input type="text" id="invDesc" placeholder="Stock, Crypto..." /></div>
+                    <div class="field"><label>Type</label><input type="text" id="invType" placeholder="Equity, Bond..." /></div>
+                    <div class="field"><label>Investment</label><input type="number" id="invAmount" placeholder="0.00" step="0.01" /></div>
+                    <div class="field"><label>Returns</label><input type="number" id="invReturns" placeholder="0.00" step="0.01" /></div>
+                    <button class="btn-add" onclick="addInvestment()"><i class="fas fa-plus"></i> Add</button>
+                </div>
+                <div class="chart-container"><canvas id="invChart"></canvas></div>
+                <div class="table-wrap table-scroll" style="max-height:340px;">
+                    <table><thead><tr><th>Date</th><th>Desc</th><th>Type</th><th>Investment</th><th>Returns</th><th style="width:80px;">Actions</th></tr></thead>
+                        <tbody id="invTableBody"></tbody></table>
+                </div>
+                <div style="margin-top:8px;font-size:12px;color:var(--text2);" id="invCount">0 rows</div>
+            </div>
+        </div>
+
+        <!-- ==================== TRADING ==================== -->
+        <div class="tab-content" id="tab-trading">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-arrow-trend-up"></i> Daily Trading P&L</h3>
+                    <div class="card-actions">
+                        <select id="sortTrade" onchange="renderTrading()">
+                            <option value="date-desc">Newest First</option>
+                            <option value="date-asc">Oldest First</option>
+                            <option value="amount-desc">Profit (High to Low)</option>
+                            <option value="amount-asc">Profit (Low to High)</option>
+                            <option value="alpha-asc">Symbol (A–Z)</option>
+                            <option value="alpha-desc">Symbol (Z–A)</option>
+                        </select>
+                        <button onclick="openAddModal('trading')"><i class="fas fa-plus"></i> Add</button>
+                        <button class="danger" onclick="clearSection('trading')"><i class="fas fa-trash"></i> Clear All</button>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="field"><label>Date</label><input type="date" id="tradeDate" /></div>
+                    <div class="field"><label>Symbol</label><input type="text" id="tradeSymbol" placeholder="AAPL, BTC..." /></div>
+                    <div class="field"><label>Profit</label><input type="number" id="tradeProfit" placeholder="0.00" step="0.01" /></div>
+                    <div class="field"><label>Loss</label><input type="number" id="tradeLoss" placeholder="0.00" step="0.01" /></div>
+                    <button class="btn-add" onclick="addTrading()"><i class="fas fa-plus"></i> Add</button>
+                </div>
+                <div class="chart-container"><canvas id="tradeChart"></canvas></div>
+                <div class="table-wrap table-scroll" style="max-height:340px;">
+                    <table><thead><tr><th>Date</th><th>Symbol</th><th>Profit</th><th>Loss</th><th style="width:80px;">Actions</th></tr></thead>
+                        <tbody id="tradeTableBody"></tbody></table>
+                </div>
+                <div style="margin-top:8px;font-size:12px;color:var(--text2);" id="tradeCount">0 rows</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ─── MODAL (Add/Edit) ─── -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-box" id="modalBox">
+            <h4 id="modalTitle"><i class="fas fa-pen"></i> Add Record</h4>
+            <div id="modalBody"></div>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn-primary" id="modalSaveBtn" onclick="modalSave()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── REPAYMENT MODAL ─── -->
+    <div class="modal-overlay" id="repayModalOverlay">
+        <div class="modal-box" id="repayModalBox">
+            <h4><i class="fas fa-hand-holding-usd"></i> Manage Repayments</h4>
+            <div id="repayModalBody"></div>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="closeRepayModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // DATA STORE
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        let data = {
+            transactions: [],
+            loans: [],
+            investments: [],
+            trading: []
+        };
+
+        // For modal state
+        let modalContext = { type: '', mode: 'add', index: -1 };
+        let currentLoanId = null;
+
+        // Chart instances
+        let charts = {};
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // CATEGORY OPTIONS
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        const incomeCategories = ['Salary', 'Freelance', 'Investment', 'Interest', 'Refund', 'Gift', 'Bonus', 'Other Income'];
+        const expenseCategories = ['Rent', 'Groceries', 'Transport', 'Entertainment', 'Healthcare', 'Education', 'Utilities',
+            'Shopping', 'Insurance', 'Tax', 'Dining', 'Other Expense'
+        ];
+
+        function updateTxCategoryOptions() {
+            const type = document.getElementById('txType').value;
+            const select = document.getElementById('txCategory');
+            const opts = type === 'income' ? incomeCategories : expenseCategories;
+            select.innerHTML = '';
+            opts.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.textContent = cat;
+                select.appendChild(opt);
+            });
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // INIT
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        document.addEventListener('DOMContentLoaded', () => {
+            loadFromLocal();
+            // Set default dates
+            const now = new Date();
+            const first = new Date(now.getFullYear(), now.getMonth(), 1);
+            document.getElementById('dashDateFrom').value = formatDate(first);
+            document.getElementById('dashDateTo').value = formatDate(now);
+            // Set today for forms
+            const today = formatDate(now);
+            document.getElementById('txDate').value = today;
+            document.getElementById('invDate').value = today;
+            document.getElementById('tradeDate').value = today;
+            document.getElementById('loanStart').value = today;
+            document.getElementById('loanEnd').value = formatDate(new Date(now.getFullYear() + 1, now.getMonth(), now.getDate()));
+            // Init category dropdown
+            updateTxCategoryOptions();
+            // Tab switching
+            document.querySelectorAll('.tab-nav button').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.tab-nav button').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+                    document.getElementById('tab-' + this.dataset.tab).classList.add('active');
+                    setTimeout(() => { renderActiveCharts(); }, 150);
+                });
+            });
+            updateAll();
+            if (localStorage.getItem('financeTheme') === 'dark') {
+                document.body.classList.add('dark');
+                document.getElementById('themeIcon').className = 'fas fa-sun';
+            }
+        });
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // HELPERS
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        function formatDate(d) {
+            const y = d.getFullYear(),
+                m = String(d.getMonth() + 1).padStart(2, '0'),
+                day = String(d.getDate()).padStart(2, '0');
+            return y + '-' + m + '-' + day;
+        }
+
+        function randId() { return Date.now().toString(36) + Math.random().toString(36).substring(2, 6); }
+
+        function fmt(n) { return Number(n).toFixed(2); }
+
+        function toast(msg, type = 'success') {
+            const el = document.getElementById('toast');
+            el.textContent = msg;
+            el.className = 'toast ' + type + ' show';
+            clearTimeout(el._timeout);
+            el._timeout = setTimeout(() => { el.className = 'toast'; }, 2200);
+        }
+
+        function getActiveTab() {
+            const activeBtn = document.querySelector('.tab-nav button.active');
+            return activeBtn ? activeBtn.dataset.tab : 'dashboard';
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // THEME
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        function toggleTheme() {
+            const isDark = document.body.classList.toggle('dark');
+            localStorage.setItem('financeTheme', isDark ? 'dark' : 'light');
+            document.getElementById('themeIcon').className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+            renderActiveCharts();
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // LOCAL STORAGE
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        function saveToLocal() {
+            try {
+                localStorage.setItem('financeData', JSON.stringify(data));
+                toast('Data saved to local storage');
+            } catch (e) { toast('Save failed', 'error'); }
+        }
+
+        function loadFromLocal() {
+            try {
+                const raw = localStorage.getItem('financeData');
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    data = parsed;
+                    data.transactions = data.transactions || [];
+                    data.loans = data.loans || [];
+                    data.investments = data.investments || [];
+                    data.trading = data.trading || [];
+                    data.loans.forEach(l => {
+                        if (!l.repayments) l.repayments = [];
+                        // Migrate old `repaid` field if exists
+                        if (l.repaid && l.repaid > 0 && l.repayments.length === 0) {
+                            l.repayments.push({ id: randId(), date: l.startDate || formatDate(new Date()),
+                            amount: l.repaid });
+                        }
+                        delete l.repaid;
+                    });
+                } else {
+                    seedDemoData();
+                }
+            } catch (e) { seedDemoData(); }
+        }
+
+        function refreshData() {
+            loadFromLocal();
+            updateAll();
+            toast('Refreshed');
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // SEED DEMO DATA (1000+ rows)
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        function seedDemoData() {
+            data.transactions = [];
+            data.loans = [];
+            data.investments = [];
+            data.trading = [];
+            const now = new Date();
+            const allCats = ['Salary', 'Freelance', 'Investment', 'Rent', 'Groceries', 'Transport', 'Entertainment',
+                'Healthcare', 'Utilities', 'Shopping', 'Insurance', 'Tax'
+            ];
+            const descs = ['Groceries', 'Monthly rent', 'Bus pass', 'Netflix', 'Doctor visit', 'Course fee', 'Electric bill',
+                'New clothes', 'Payroll', 'Client payment', 'Stock purchase', 'Premium', 'Tax refund'
+            ];
+            for (let i = 0; i < 1000; i++) {
+                const d = new Date(now);
+                d.setDate(d.getDate() - Math.floor(Math.random() * 365));
+                const isInc = Math.random() > 0.45;
+                const cat = allCats[Math.floor(Math.random() * allCats.length)];
+                const amt = Math.round((Math.random() * 500 + 10) * 100) / 100;
+                data.transactions.push({
+                    id: 'tx_' + i,
+                    date: formatDate(d),
+                    description: descs[Math.floor(Math.random() * descs.length)] + ' ' + (i + 1),
+                    type: isInc ? 'income' : 'expense',
+                    category: cat,
+                    amount: amt
+                });
+            }
+            for (let i = 0; i < 12; i++) {
+                const amt = Math.round((Math.random() * 20000 + 1000) * 100) / 100;
+                const start = new Date(now);
+                start.setMonth(start.getMonth() - Math.floor(Math.random() * 24));
+                const end = new Date(start);
+                end.setMonth(end.getMonth() + Math.floor(Math.random() * 18 + 6));
+                const repayments = [];
+                let totalRepaid = 0;
+                const numRepay = Math.floor(Math.random() * 5);
+                for (let j = 0; j < numRepay; j++) {
+                    const rDate = new Date(start);
+                    rDate.setDate(rDate.getDate() + Math.floor(Math.random() * 180) + 30);
+                    const rAmt = Math.round((Math.random() * amt * 0.15 + 100) * 100) / 100;
+                    if (totalRepaid + rAmt <= amt) {
+                        repayments.push({ id: randId(), date: formatDate(rDate), amount: rAmt });
+                        totalRepaid += rAmt;
+                    }
+                }
+                data.loans.push({
+                    id: 'loan_' + i,
+                    lender: ['Bank of America', 'Wells Fargo', 'Chase', 'Credit Union', 'Private Lender', 'Family'][Math
+                        .floor(Math.random() * 6)],
+                    amount: amt,
+                    interest: Math.round((Math.random() * 12 + 1) * 100) / 100,
+                    startDate: formatDate(start),
+                    endDate: formatDate(end),
+                    repayments: repayments
+                });
+            }
+            for (let i = 0; i < 1000; i++) {
+                const d = new Date(now);
+                d.setDate(d.getDate() - Math.floor(Math.random() * 365));
+                const inv = Math.round((Math.random() * 1000 + 50) * 100) / 100;
+                const ret = Math.round((Math.random() * 1200 - 100) * 100) / 100;
+                data.investments.push({
+                    id: 'inv_' + i,
+                    date: formatDate(d),
+                    description: ['Stocks', 'Bonds', 'Real Estate', 'Crypto', 'Mutual Fund', 'ETF', 'Gold'][Math.floor(Math
+                        .random() * 7)] + ' ' + (i + 1),
+                    type: ['Equity', 'Fixed', 'Property', 'Digital', 'Fund', 'Index', 'Commodity'][Math.floor(Math.random() *
+                        7)],
+                    investment: inv,
+                    returns: ret
+                });
+            }
+            for (let i = 0; i < 1000; i++) {
+                const d = new Date(now);
+                d.setDate(d.getDate() - Math.floor(Math.random() * 365));
+                const p = Math.round((Math.random() * 200) * 100) / 100;
+                const l = Math.round((Math.random() * 150) * 100) / 100;
+                data.trading.push({
+                    id: 'trade_' + i,
+                    date: formatDate(d),
+                    symbol: ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'BTC', 'ETH', 'TSLA', 'NVDA'][Math.floor(Math.random() * 8)],
+                    profit: p,
+                    loss: l
+                });
+            }
+            if (data.loans.length === 0) {
+                data.loans.push({
+                    id: 'loan_demo',
+                    lender: 'Demo Bank',
+                    amount: 5000,
+                    interest: 5.5,
+                    startDate: formatDate(now),
+                    endDate: formatDate(new Date(now.getFullYear() + 1, now.getMonth(), now.getDate())),
+                    repayments: []
+                });
+            }
+            saveToLocal();
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // SORTING HELPERS
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        function sortArray(arr, sortKey, type) {
+            const [field, order] = sortKey.split('-');
+            const isAsc = order === 'asc';
+            const multiplier = isAsc ? 1 : -1;
+
+            return arr.slice().sort((a, b) => {
+                let valA, valB;
+                switch (field) {
+                    case 'date':
+                        valA = a.date || a.startDate || '';
+                        valB = b.date || b.startDate || '';
+                        break;
+                    case 'amount':
+                        if (type === 'transactions') {
+                            valA = a.amount || 0;
+                            valB = b.amount || 0;
+                        } else if (type === 'loans') {
+                            valA = a.amount || 0;
+                            valB = b.amount || 0;
+                        } else if (type === 'investments') {
+                            valA = a.investment || 0;
+                            valB = b.investment || 0;
+                        } else if (type === 'trading') {
+                            valA = a.profit || 0;
+                            valB = b.profit || 0;
+                        }
+                        break;
+                    case 'alpha':
+                        if (type === 'transactions') {
+                            valA = a.description || '';
+                            valB = b.description || '';
+                        } else if (type === 'loans') {
+                            valA = a.lender || '';
+                            valB = b.lender || '';
+                        } else if (type === 'investments') {
+                            valA = a.description || '';
+                            valB = b.description || '';
+                        } else if (type === 'trading') {
+                            valA = a.symbol || '';
+                            valB = b.symbol || '';
+                        }
+                        break;
+                    default:
+                        return 0;
+                }
+                if (typeof valA === 'string') {
+                    return valA.localeCompare(valB) * multiplier;
+                } else {
+                    return (valA - valB) * multiplier;
+                }
+            });
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // LOAN HELPERS (Interest calculation fixed)
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        function getLoanSummary(loan) {
+            const totalRepaid = loan.repayments.reduce((s, r) => s + r.amount, 0);
+            const remaining = loan.amount - totalRepaid;
+            const status = remaining <= 0 ? 'paid' : 'active';
+            // Simple interest on remaining balance from start date to today
+            const start = new Date(loan.startDate + 'T00:00:00');
+            const now = new Date();
+            const days = Math.max(0, (now - start) / (1000 * 60 * 60 * 24));
+            const annualRate = loan.interest / 100;
+            const interest = remaining * annualRate * (days / 365);
+            return { totalRepaid, remaining, status, interest };
+        }
+
+        function getTotalLoanStats() {
+            let totalAmount = 0,
+                totalRepaid = 0,
+                totalRemaining = 0,
+                totalInterest = 0;
+            data.loans.forEach(l => {
+                const s = getLoanSummary(l);
+                totalAmount += l.amount;
+                totalRepaid += s.totalRepaid;
+                totalRemaining += s.remaining;
+                totalInterest += s.interest;
+            });
+            return { totalAmount, totalRepaid, totalRemaining, totalInterest };
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // UPDATE ALL
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        function updateAll() {
+            updateDashboard();
+            renderTransactions();
+            renderExpenses();
+            renderLoans();
+            renderInvestments();
+            renderTrading();
+            renderActiveCharts();
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // RENDER ACTIVE CHARTS
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        function renderActiveCharts() {
+            const active = getActiveTab();
+            Object.keys(charts).forEach(key => {
+                if (charts[key]) {
+                    charts[key].destroy();
+                    delete charts[key];
+                }
+            });
+            switch (active) {
+                case 'dashboard':
+                    renderDashChart();
+                    break;
+                case 'transactions':
+                    renderTxChart();
+                    break;
+                case 'expenses':
+                    renderExpChart();
+                    break;
+                case 'loans':
+                    renderLoanLenderChart();
+                    break;
+                case 'investments':
+                    renderInvChart();
+                    break;
+                case 'trading':
+                    renderTradeChart();
+                    break;
+                default:
+                    renderDashChart();
+            }
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // CLEAR SECTION
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        function clearSection(type) {
+            if (!confirm(`Are you sure you want to delete ALL ${type}? This action cannot be undone.`)) return;
+            switch (type) {
+                case 'transactions':
+                    data.transactions = [];
+                    break;
+                case 'loans':
+                    data.loans = [];
+                    break;
+                case 'investments':
+                    data.investments = [];
+                    break;
+                case 'trading':
+                    data.trading = [];
+                    break;
+                default:
+                    return;
+            }
+            saveToLocal();
+            updateAll();
+            toast(`All ${type} cleared`);
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // DASHBOARD
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        function getDateRange() {
+            const from = document.getElementById('dashDateFrom').value;
+            const to = document.getElementById('dashDateTo').value;
+            return { from, to };
+        }
+
+        function resetDashboardDates() {
+            const now = new Date();
+            const first = new Date(now.getFullYear(), now.getMonth(), 1);
+            document.getElementById('dashDateFrom').value = formatDate(first);
+            document.getElementById('dashDateTo').value = formatDate(now);
+            updateDashboard();
+        }
+
+        function updateDashboard() {
+            const { from, to } = getDateRange();
+            const tx = data.transactions.filter(t => t.date >= from && t.date <= to);
+            const income = tx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+            const expenses = tx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+            const net = income - expenses;
+            const inv = data.investments.filter(t => t.date >= from && t.date <= to);
+            const totalInv = inv.reduce((s, t) => s + t.investment, 0);
+            const totalRet = inv.reduce((s, t) => s + t.returns, 0);
+            const trade = data.trading.filter(t => t.date >= from && t.date <= to);
+            const pnl = trade.reduce((s, t) => s + (t.profit - t.loss), 0);
+            const loanStats = getTotalLoanStats();
+            const activeLoans = data.loans.filter(l => getLoanSummary(l).status === 'active');
+            document.getElementById('dashIncome').textContent = '₹' + fmt(income);
+            document.getElementById('dashExpenses').textContent = '₹' + fmt(expenses);
+            document.getElementById('dashNet').textContent = '₹' + fmt(net);
+            document.getElementById('dashInvest').textContent = '₹' + fmt(totalInv);
+            document.getElementById('dashReturns').textContent = '₹' + fmt(totalRet);
+            document.getElementById('dashPnL').textContent = '₹' + fmt(pnl);
+            document.getElementById('dashPnL').className = 'stat-value' + (pnl >= 0 ? ' green' : ' red');
+            document.getElementById('dashLoans').textContent = activeLoans.length;
+            document.getElementById('dashRepaid').textContent = '₹' + fmt(loanStats.totalRepaid);
+            if (getActiveTab() === 'dashboard') {
+                renderDashChart();
+            }
+        }
+
+        function cumulative(arr) {
+            let cum = 0;
+            return arr.map(v => { cum += v; return cum; });
+        }
+
+        function renderDashChart() {
+            const { from, to } = getDateRange();
+            const tx = data.transactions.filter(t => t.date >= from && t.date <= to);
+            const sorted = [...tx].sort((a, b) => a.date.localeCompare(b.date));
+            const labels = sorted.map(t => t.date);
+            const incData = cumulative(sorted.map(t => t.type === 'income' ? t.amount : 0));
+            const expData = cumulative(sorted.map(t => t.type === 'expense' ? t.amount : 0));
+            const ctx = document.getElementById('dashChart').getContext('2d');
+            if (charts.dash) { charts.dash.destroy();
+                delete charts.dash; }
+            const isDark = document.body.classList.contains('dark');
+            const textColor = isDark ? '#cbd5e1' : '#4a4a6a';
+            charts.dash = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels.length > 0 ? labels : ['No Data'],
+                    datasets: [{
+                        label: 'Income',
+                        data: labels.length > 0 ? incData : [0],
+                        borderColor: '#22c55e',
+                        backgroundColor: 'rgba(34,197,94,0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 1,
+                    }, {
+                        label: 'Expenses',
+                        data: labels.length > 0 ? expData : [0],
+                        borderColor: '#ef4444',
+                        backgroundColor: 'rgba(239,68,68,0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 1,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: textColor, font: { size: 11 } } } },
+                    scales: {
+                        x: { ticks: { color: textColor, maxTicksLimit: 12, font: { size: 10 } },
+                            grid: { color: isDark ? '#1e293b' : '#e2e6ee' } },
+                        y: { ticks: { color: textColor, font: { size: 10 } }, grid: { color: isDark ? '#1e293b' :
+                                    '#e2e6ee' } }
+                    }
+                }
+            });
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // TRANSACTIONS
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        function addTransaction() {
+            const date = document.getElementById('txDate').value;
+            const description = document.getElementById('txDesc').value.trim();
+            const type = document.getElementById('txType').value;
+            const category = document.getElementById('txCategory').value;
+            const amount = parseFloat(document.getElementById('txAmount').value);
+            if (!date || !description || !amount || amount <= 0) { toast('Please fill all fields', 'error'); return; }
+            data.transactions.push({ id: randId(), date, description, type, category, amount });
+            saveToLocal();
+            updateAll();
+            document.getElementById('txDesc').value = '';
+            document.getElementById('txAmount').value = '';
+            toast('Transaction added');
+        }
+
+        function renderTransactions() {
+            const sortVal = document.getElementById('sortTx').value;
+            const sorted = sortArray(data.transactions, sortVal, 'transactions');
+            const tbody = document.getElementById('txTableBody');
+            tbody.innerHTML = '';
+            sorted.forEach((t, idx) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+              <td>${t.date}</td>
+              <td class="truncate">${t.description}</td>
+              <td>${t.category || 'Uncategorized'}</td>
+              <td><span class="badge ${t.type === 'income' ? 'badge-income' : 'badge-expense'}">${t.type}</span></td>
+              <td style="color:${t.type === 'income' ? 'var(--green)' : 'var(--red)'};font-weight:600;">${t.type === 'income' ? '+' : '-'}₹${fmt(t.amount)}</td>
+              <td><div class="table-actions">
+                <button onclick="editTransaction('${t.id}')" title="Edit"><i class="fas fa-pen"></i></button>
+                <button class="danger" onclick="deleteTransaction('${t.id}')" title="Delete"><i class="fas fa-trash"></i></button>
+              </div></td>
+            `;
+                tbody.appendChild(tr);
+            });
+            document.getElementById('txCount').textContent = data.transactions.length + ' rows';
+        }
+
+        function deleteTransaction(id) {
+            if (!confirm('Delete this transaction?')) return;
+            data.transactions = data.transactions.filter(t => t.id !== id);
+            saveToLocal();
+            updateAll();
+            toast('Deleted');
+        }
+
+        function editTransaction(id) {
+            const t = data.transactions.find(tx => tx.id === id);
+            if (!t) return;
+            openModal('transaction', 'edit', t);
+        }
+
+        function renderTxChart() {
+            const sorted = [...data.transactions].sort((a, b) => a.date.localeCompare(b.date));
+            const labels = sorted.map(t => t.date);
+            const inc = cumulative(sorted.map(t => t.type === 'income' ? t.amount : 0));
+            const exp = cumulative(sorted.map(t => t.type === 'expense' ? t.amount : 0));
+            const ctx = document.getElementById('txChart').getContext('2d');
+            if (charts.tx) { charts.tx.destroy();
+                delete charts.tx; }
+            const isDark = document.body.classList.contains('dark');
+            const textColor = isDark ? '#cbd5e1' : '#4a4a6a';
+            charts.tx = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels.length > 0 ? labels : ['No Data'],
+                    datasets: [{
+                        label: 'Income',
+                        data: labels.length > 0 ? inc : [0],
+                        borderColor: '#22c55e',
+                        backgroundColor: 'rgba(34,197,94,0.05)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 0.5,
+                    }, {
+                        label: 'Expenses',
+                        data: labels.length > 0 ? exp : [0],
+                        borderColor: '#ef4444',
+                        backgroundColor: 'rgba(239,68,68,0.05)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 0.5,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: textColor, font: { size: 11 } } } },
+                    scales: {
+                        x: { ticks: { color: textColor, maxTicksLimit: 20, font: { size: 9 } },
+                            grid: { color: isDark ? '#1e293b' : '#e2e6ee' } },
+                        y: { ticks: { color: textColor, font: { size: 9 } }, grid: { color: isDark ? '#1e293b' :
+                                    '#e2e6ee' } }
+                    }
+                }
+            });
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // EXPENSES
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        function renderExpenses() {
+            const expenses = data.transactions.filter(t => t.type === 'expense');
+            const map = {};
+            expenses.forEach(t => { map[t.category] = (map[t.category] || 0) + t.amount; });
+            const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]);
+            const tbody = document.getElementById('expTableBody');
+            tbody.innerHTML = '';
+            let total = 0;
+            sorted.forEach(([cat, amt]) => {
+                total += amt;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${cat}</td><td style="font-weight:600;">₹${fmt(amt)}</td>`;
+                tbody.appendChild(tr);
+            });
+            document.getElementById('expTotal').textContent = '₹' + fmt(total);
+            if (getActiveTab() === 'expenses') {
+                renderExpChart();
+            }
+        }
+
+        function renderExpChart() {
+            const expenses = data.transactions.filter(t => t.type === 'expense');
+            const map = {};
+            expenses.forEach(t => { map[t.category] = (map[t.category] || 0) + t.amount; });
+            const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]);
+            const ctx = document.getElementById('expChart').getContext('2d');
+            if (charts.exp) { charts.exp.destroy();
+                delete charts.exp; }
+            const isDark = document.body.classList.contains('dark');
+            const textColor = isDark ? '#cbd5e1' : '#4a4a6a';
+            const colors = ['#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1'];
+            charts.exp = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: sorted.map(s => s[0]),
+                    datasets: [{
+                        label: 'Expenses',
+                        data: sorted.map(s => s[1]),
+                        backgroundColor: sorted.map((_, i) => colors[i % colors.length]),
+                        borderRadius: 4,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { color: textColor, font: { size: 10 } }, grid: { color: isDark ? '#1e293b' :
+                                    '#e2e6ee' } },
+                        y: { ticks: { color: textColor, font: { size: 10 } }, grid: { color: isDark ? '#1e293b' :
+                                    '#e2e6ee' } }
+                    }
+                }
+            });
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // LOANS (Interest now shown in table)
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        function addLoan() {
+            const lender = document.getElementById('loanLender').value.trim();
+            const amount = parseFloat(document.getElementById('loanAmount').value);
+            const interest = parseFloat(document.getElementById('loanInterest').value) || 0;
+            const startDate = document.getElementById('loanStart').value;
+            const endDate = document.getElementById('loanEnd').value;
+            if (!lender || !amount || !startDate || !endDate) { toast('Please fill all fields', 'error'); return; }
+            data.loans.push({
+                id: randId(),
+                lender,
+                amount,
+                interest,
+                startDate,
+                endDate,
+                repayments: []
+            });
+            saveToLocal();
+            updateAll();
+            document.getElementById('loanLender').value = '';
+            document.getElementById('loanAmount').value = '';
+            document.getElementById('loanInterest').value = '';
+            toast('Loan added');
+        }
+
+        function renderLoans() {
+            const sortVal = document.getElementById('sortLoan').value;
+            const sorted = sortArray(data.loans, sortVal, 'loans');
+            const tbody = document.getElementById('loanTableBody');
+            tbody.innerHTML = '';
+            sorted.forEach((l, idx) => {
+                const summary = getLoanSummary(l);
+                const repaid = summary.totalRepaid;
+                const bal = summary.remaining;
+                const status = summary.status;
+                const interest = summary.interest;
+                // Update loan status if changed
+                if (l.status !== status) l.status = status;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+              <td>${l.lender}</td>
+              <td>₹${fmt(l.amount)}</td>
+              <td>${l.interest}%</td>
+              <td>${l.startDate}</td>
+              <td>${l.endDate}</td>
+              <td><span class="badge ${status === 'paid' ? 'badge-paid' : 'badge-active'}">${status}</span></td>
+              <td>₹${fmt(repaid)}</td>
+              <td>₹${fmt(bal)}</td>
+              <td style="color:var(--orange);font-weight:600;">₹${fmt(interest)}</td>
+              <td><div class="table-actions">
+                <button class="success" onclick="openRepayModal('${l.id}')" title="Repayments"><i class="fas fa-hand-holding-usd"></i></button>
+                <button onclick="editLoan('${l.id}')" title="Edit"><i class="fas fa-pen"></i></button>
+                <button class="danger" onclick="deleteLoan('${l.id}')" title="Delete"><i class="fas fa-trash"></i></button>
+              </div></td>
+            `;
+                tbody.appendChild(tr);
+            });
+
+            // Update summary stats
+            const stats = getTotalLoanStats();
+            document.getElementById('loanTotalCount').textContent = data.loans.length;
+            document.getElementById('loanTotalAmount').textContent = '₹' + fmt(stats.totalAmount);
+            document.getElementById('loanTotalRepaid').textContent = '₹' + fmt(stats.totalRepaid);
+            document.getElementById('loanTotalRemaining').textContent = '₹' + fmt(stats.totalRemaining);
+            document.getElementById('loanTotalInterest').textContent = '₹' + fmt(stats.totalInterest);
+
+            if (getActiveTab() === 'loans') {
+                renderLoanLenderChart();
+            }
+        }
+
+        function deleteLoan(id) {
+            if (!confirm('Delete this loan?')) return;
+            data.loans = data.loans.filter(l => l.id !== id);
+            saveToLocal();
+            updateAll();
+            toast('Deleted');
+        }
+
+        function editLoan(id) {
+            const l = data.loans.find(ln => ln.id === id);
+            if (!l) return;
+            openModal('loan', 'edit', l);
+        }
+
+        // ─── Repayment Modal ───
+        function openRepayModal(loanId) {
+            currentLoanId = loanId;
+            const loan = data.loans.find(l => l.id === loanId);
+            if (!loan) return;
+            const summary = getLoanSummary(loan);
+            const repayments = loan.repayments || [];
+
+            const body = document.getElementById('repayModalBody');
+            let html = `
+            <div style="margin-bottom:12px;">
+              <strong>${loan.lender}</strong> – ₹${fmt(loan.amount)} @ ${loan.interest}% p.a.<br>
+              Remaining: ₹${fmt(summary.remaining)} | Repaid: ₹${fmt(summary.totalRepaid)} | Interest Accrued: ₹${fmt(summary.interest)}
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+              <div class="field" style="flex:1;min-width:120px;">
+                <label>Date</label>
+                <input type="date" id="repayDate" value="${formatDate(new Date())}" />
+              </div>
+              <div class="field" style="flex:1;min-width:120px;">
+                <label>Amount</label>
+                <input type="number" id="repayAmount" placeholder="0.00" step="0.01" />
+              </div>
+              <button class="btn-add" onclick="addRepayment('${loanId}')" style="align-self:end;"><i class="fas fa-plus"></i> Add</button>
+            </div>
+            <div style="max-height:200px; overflow-y:auto;">
+              <table style="width:100%; font-size:12px;">
+                <thead><tr><th>Date</th><th>Amount</th><th style="width:40px;">Action</th></tr></thead>
+                <tbody id="repayTableBody">
+          `;
+            if (repayments.length === 0) {
+                html += `<tr><td colspan="3" style="text-align:center;color:var(--text2);">No repayments yet</td></tr>`;
+            } else {
+                repayments.forEach(r => {
+                    html += `<tr>
+                <td>${r.date}</td>
+                <td>₹${fmt(r.amount)}</td>
+                <td><button class="danger" style="background:transparent;border:none;color:var(--red);cursor:pointer;" onclick="deleteRepayment('${loanId}','${r.id}')"><i class="fas fa-trash"></i></button></td>
+              </tr>`;
+                });
+            }
+            html += `</tbody></table></div>`;
+            body.innerHTML = html;
+            document.getElementById('repayModalOverlay').classList.add('open');
+        }
+
+        function closeRepayModal() {
+            document.getElementById('repayModalOverlay').classList.remove('open');
+            currentLoanId = null;
+            updateAll();
+        }
+
+        function addRepayment(loanId) {
+            const date = document.getElementById('repayDate').value;
+            const amount = parseFloat(document.getElementById('repayAmount').value);
+            if (!date || !amount || amount <= 0) { toast('Please enter a valid date and amount', 'error'); return; }
+            const loan = data.loans.find(l => l.id === loanId);
+            if (!loan) return;
+            const summary = getLoanSummary(loan);
+            if (amount > summary.remaining) { toast('Amount exceeds remaining balance', 'error'); return; }
+            loan.repayments.push({ id: randId(), date, amount });
+            if (summary.remaining - amount <= 0) loan.status = 'paid';
+            saveToLocal();
+            openRepayModal(loanId);
+            toast('Repayment added');
+        }
+
+        function deleteRepayment(loanId, repayId) {
+            if (!confirm('Delete this repayment?')) return;
+            const loan = data.loans.find(l => l.id === loanId);
+            if (!loan) return;
+            loan.repayments = loan.repayments.filter(r => r.id !== repayId);
+            const summary = getLoanSummary(loan);
+            loan.status = summary.remaining <= 0 ? 'paid' : 'active';
+            saveToLocal();
+            openRepayModal(loanId);
+            toast('Repayment deleted');
+        }
+
+        function renderLoanLenderChart() {
+            const map = {};
+            data.loans.forEach(l => {
+                const remaining = getLoanSummary(l).remaining;
+                if (remaining > 0) {
+                    map[l.lender] = (map[l.lender] || 0) + remaining;
+                }
+            });
+            const lenders = Object.keys(map);
+            const balances = lenders.map(l => map[l]);
+            const total = balances.reduce((a, b) => a + b, 0);
+            const ctx = document.getElementById('loanLenderChart').getContext('2d');
+            if (charts.loanLender) { charts.loanLender.destroy();
+                delete charts.loanLender; }
+            const isDark = document.body.classList.contains('dark');
+            const textColor = isDark ? '#cbd5e1' : '#4a4a6a';
+            const colors = ['#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#06b6d4', '#84cc16', '#d946ef',
+                '#f43f5e'
+            ];
+            charts.loanLender = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: lenders.length ? lenders : ['No data'],
+                    datasets: [{
+                        data: lenders.length ? balances : [1],
+                        backgroundColor: lenders.length ? lenders.map((_, i) => colors[i % colors.length]) : ['#94a3b8'],
+                        borderColor: isDark ? '#1e293b' : '#fff',
+                        borderWidth: 2,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: textColor, font: { size: 11 } } },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const val = context.parsed || 0;
+                                    const pct = total > 0 ? (val / total * 100) : 0;
+                                    return label + ': ₹' + fmt(val) + ' (' + pct.toFixed(1) + '%)';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // INVESTMENTS
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        function addInvestment() {
+            const date = document.getElementById('invDate').value;
+            const description = document.getElementById('invDesc').value.trim();
+            const type = document.getElementById('invType').value.trim() || 'General';
+            const investment = parseFloat(document.getElementById('invAmount').value);
+            const returns = parseFloat(document.getElementById('invReturns').value) || 0;
+            if (!date || !description || !investment || investment <= 0) { toast('Please fill required fields', 'error');
+                return; }
+            data.investments.push({ id: randId(), date, description, type, investment, returns });
+            saveToLocal();
+            updateAll();
+            document.getElementById('invDesc').value = '';
+            document.getElementById('invAmount').value = '';
+            document.getElementById('invReturns').value = '';
+            toast('Investment added');
+        }
+
+        function renderInvestments() {
+            const sortVal = document.getElementById('sortInv').value;
+            const sorted = sortArray(data.investments, sortVal, 'investments');
+            const tbody = document.getElementById('invTableBody');
+            tbody.innerHTML = '';
+            sorted.forEach(t => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+              <td>${t.date}</td>
+              <td class="truncate">${t.description}</td>
+              <td>${t.type}</td>
+              <td style="color:var(--orange);font-weight:600;">₹${fmt(t.investment)}</td>
+              <td style="color:${t.returns >= 0 ? 'var(--green)' : 'var(--red)'};font-weight:600;">₹${fmt(t.returns)}</td>
+              <td><div class="table-actions">
+                <button onclick="editInvestment('${t.id}')" title="Edit"><i class="fas fa-pen"></i></button>
+                <button class="danger" onclick="deleteInvestment('${t.id}')" title="Delete"><i class="fas fa-trash"></i></button>
+              </div></td>
+            `;
+                tbody.appendChild(tr);
+            });
+            document.getElementById('invCount').textContent = data.investments.length + ' rows';
+        }
+
+        function deleteInvestment(id) {
+            if (!confirm('Delete this investment?')) return;
+            data.investments = data.investments.filter(t => t.id !== id);
+            saveToLocal();
+            updateAll();
+            toast('Deleted');
+        }
+
+        function editInvestment(id) {
+            const t = data.investments.find(inv => inv.id === id);
+            if (!t) return;
+            openModal('investment', 'edit', t);
+        }
+
+        function renderInvChart() {
+            const sorted = [...data.investments].sort((a, b) => a.date.localeCompare(b.date));
+            const labels = sorted.map(t => t.date);
+            const inv = cumulative(sorted.map(t => t.investment));
+            const ret = cumulative(sorted.map(t => t.returns));
+            const ctx = document.getElementById('invChart').getContext('2d');
+            if (charts.inv) { charts.inv.destroy();
+                delete charts.inv; }
+            const isDark = document.body.classList.contains('dark');
+            const textColor = isDark ? '#cbd5e1' : '#4a4a6a';
+            charts.inv = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels.length > 0 ? labels : ['No Data'],
+                    datasets: [{
+                        label: 'Investment',
+                        data: labels.length > 0 ? inv : [0],
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245,158,11,0.05)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 0.5,
+                    }, {
+                        label: 'Returns',
+                        data: labels.length > 0 ? ret : [0],
+                        borderColor: '#22c55e',
+                        backgroundColor: 'rgba(34,197,94,0.05)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 0.5,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: textColor, font: { size: 11 } } } },
+                    scales: {
+                        x: { ticks: { color: textColor, maxTicksLimit: 20, font: { size: 9 } },
+                            grid: { color: isDark ? '#1e293b' : '#e2e6ee' } },
+                        y: { ticks: { color: textColor, font: { size: 9 } }, grid: { color: isDark ? '#1e293b' :
+                                    '#e2e6ee' } }
+                    }
+                }
+            });
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // TRADING
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        function addTrading() {
+            const date = document.getElementById('tradeDate').value;
+            const symbol = document.getElementById('tradeSymbol').value.trim();
+            const profit = parseFloat(document.getElementById('tradeProfit').value) || 0;
+            const loss = parseFloat(document.getElementById('tradeLoss').value) || 0;
+            if (!date || !symbol || (profit === 0 && loss === 0)) { toast('Please fill fields', 'error'); return; }
+            data.trading.push({ id: randId(), date, symbol, profit, loss });
+            saveToLocal();
+            updateAll();
+            document.getElementById('tradeSymbol').value = '';
+            document.getElementById('tradeProfit').value = '';
+            document.getElementById('tradeLoss').value = '';
+            toast('Trade added');
+        }
+
+        function renderTrading() {
+            const sortVal = document.getElementById('sortTrade').value;
+            const sorted = sortArray(data.trading, sortVal, 'trading');
+            const tbody = document.getElementById('tradeTableBody');
+            tbody.innerHTML = '';
+            sorted.forEach(t => {
+                const pnl = t.profit - t.loss;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+              <td>${t.date}</td>
+              <td>${t.symbol}</td>
+              <td style="color:var(--green);font-weight:600;">₹${fmt(t.profit)}</td>
+              <td style="color:var(--red);font-weight:600;">₹${fmt(t.loss)}</td>
+              <td style="font-weight:700;color:${pnl >= 0 ? 'var(--green)' : 'var(--red)'};">${pnl >= 0 ? '+' : ''}₹${fmt(pnl)}</td>
+              <td><div class="table-actions">
+                <button onclick="editTrading('${t.id}')" title="Edit"><i class="fas fa-pen"></i></button>
+                <button class="danger" onclick="deleteTrading('${t.id}')" title="Delete"><i class="fas fa-trash"></i></button>
+              </div></td>
+            `;
+                tbody.appendChild(tr);
+            });
+            document.getElementById('tradeCount').textContent = data.trading.length + ' rows';
+        }
+
+        function deleteTrading(id) {
+            if (!confirm('Delete this trade?')) return;
+            data.trading = data.trading.filter(t => t.id !== id);
+            saveToLocal();
+            updateAll();
+            toast('Deleted');
+        }
+
+        function editTrading(id) {
+            const t = data.trading.find(tr => tr.id === id);
+            if (!t) return;
+            openModal('trading', 'edit', t);
+        }
+
+        function renderTradeChart() {
+            const sorted = [...data.trading].sort((a, b) => a.date.localeCompare(b.date));
+            const labels = sorted.map(t => t.date);
+            const profit = cumulative(sorted.map(t => t.profit));
+            const loss = cumulative(sorted.map(t => t.loss));
+            const ctx = document.getElementById('tradeChart').getContext('2d');
+            if (charts.trade) { charts.trade.destroy();
+                delete charts.trade; }
+            const isDark = document.body.classList.contains('dark');
+            const textColor = isDark ? '#cbd5e1' : '#4a4a6a';
+            charts.trade = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels.length > 0 ? labels : ['No Data'],
+                    datasets: [{
+                        label: 'Profit',
+                        data: labels.length > 0 ? profit : [0],
+                        borderColor: '#22c55e',
+                        backgroundColor: 'rgba(34,197,94,0.05)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 0.5,
+                    }, {
+                        label: 'Loss',
+                        data: labels.length > 0 ? loss : [0],
+                        borderColor: '#ef4444',
+                        backgroundColor: 'rgba(239,68,68,0.05)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 0.5,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: textColor, font: { size: 11 } } } },
+                    scales: {
+                        x: { ticks: { color: textColor, maxTicksLimit: 20, font: { size: 9 } },
+                            grid: { color: isDark ? '#1e293b' : '#e2e6ee' } },
+                        y: { ticks: { color: textColor, font: { size: 9 } }, grid: { color: isDark ? '#1e293b' :
+                                    '#e2e6ee' } }
+                    }
+                }
+            });
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // MODAL SYSTEM (Add/Edit)
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        function openModal(type, mode, record) {
+            modalContext.type = type;
+            modalContext.mode = mode;
+            modalContext.index = -1;
+            const overlay = document.getElementById('modalOverlay');
+            const body = document.getElementById('modalBody');
+            const title = document.getElementById('modalTitle');
+            const saveBtn = document.getElementById('modalSaveBtn');
+
+            const fields = getModalFields(type, record);
+            body.innerHTML = fields;
+            title.innerHTML = `<i class="fas fa-${mode === 'add' ? 'plus' : 'pen'}"></i> ${mode === 'add' ? 'Add' : 'Edit'} ${capitalize(type)}`;
+            saveBtn.textContent = mode === 'add' ? 'Add' : 'Update';
+            overlay.classList.add('open');
+            if (mode === 'edit' && record) {
+                body.dataset.editId = record.id;
+            } else {
+                body.dataset.editId = '';
+            }
+            if (mode === 'edit' && record) {
+                const inputs = body.querySelectorAll('input, select');
+                inputs.forEach(inp => {
+                    const key = inp.dataset.field;
+                    if (key && record[key] !== undefined) {
+                        inp.value = record[key];
+                    }
+                });
+                // For transaction category, also update dropdown options based on type
+                if (type === 'transaction') {
+                    const typeSelect = body.querySelector('[data-field="type"]');
+                    const catSelect = body.querySelector('[data-field="category"]');
+                    if (typeSelect && catSelect) {
+                        const currentType = typeSelect.value;
+                        const opts = currentType === 'income' ? incomeCategories : expenseCategories;
+                        catSelect.innerHTML = '';
+                        opts.forEach(cat => {
+                            const opt = document.createElement('option');
+                            opt.value = cat;
+                            opt.textContent = cat;
+                            if (cat === record.category) opt.selected = true;
+                            catSelect.appendChild(opt);
+                        });
+                        typeSelect.onchange = function() {
+                            const opts2 = this.value === 'income' ? incomeCategories : expenseCategories;
+                            catSelect.innerHTML = '';
+                            opts2.forEach(cat => {
+                                const opt = document.createElement('option');
+                                opt.value = cat;
+                                opt.textContent = cat;
+                                catSelect.appendChild(opt);
+                            });
+                        };
+                    }
+                }
+            }
+        }
+
+        function getModalFields(type, record) {
+            const common = (fields) => fields.map(f =>
+                `<div class="field"><label>${f.label}</label><input type="${f.type}" data-field="${f.key}" ${f.required ? 'required' : ''} placeholder="${f.placeholder || ''}" step="${f.step || ''}" ${f.type === 'date' ? '' : ''} /></div>`
+            ).join('');
+            switch (type) {
+                case 'transaction':
+                    return `<div class="form-row">${[
+                {label:'Date',key:'date',type:'date',required:true},
+                {label:'Description',key:'description',type:'text',required:true,placeholder:'e.g. Groceries'},
+                {label:'Type',key:'type',type:'select',required:true,options:['income','expense']},
+                {label:'Category',key:'category',type:'select',required:true,options:['Salary','Freelance','Investment','Interest','Refund','Gift','Bonus','Other Income']},
+                {label:'Amount',key:'amount',type:'number',required:true,step:'0.01',placeholder:'0.00'}
+              ].map(f => {
+                if (f.type === 'select') {
+                  const opts = f.options.map(o => `<option value="${o}">${o}</option>`).join('');
+                  return `<div class="field"><label>${f.label}</label><select data-field="${f.key}">${opts}</select></div>`;
+                } else {
+                  return `<div class="field"><label>${f.label}</label><input type="${f.type}" data-field="${f.key}" ${f.required ? 'required' : ''} placeholder="${f.placeholder || ''}" step="${f.step || ''}" /></div>`;
+                }
+              }).join('')}</div>`;
+                case 'loan':
+                    return `<div class="form-row">${common([
+                {label:'Lender',key:'lender',type:'text',required:true,placeholder:'Bank / Person'},
+                {label:'Amount',key:'amount',type:'number',required:true,step:'0.01',placeholder:'0.00'},
+                {label:'Interest % (p.a.)',key:'interest',type:'number',step:'0.01',placeholder:'0'},
+                {label:'Start Date',key:'startDate',type:'date',required:true},
+                {label:'End Date',key:'endDate',type:'date',required:true}
+              ])}</div>`;
+                case 'investment':
+                    return `<div class="form-row">${common([
+                {label:'Date',key:'date',type:'date',required:true},
+                {label:'Description',key:'description',type:'text',required:true,placeholder:'Stock, Crypto...'},
+                {label:'Type',key:'type',type:'text',placeholder:'Equity, Bond...'},
+                {label:'Investment',key:'investment',type:'number',required:true,step:'0.01',placeholder:'0.00'},
+                {label:'Returns',key:'returns',type:'number',step:'0.01',placeholder:'0.00'}
+              ])}</div>`;
+                case 'trading':
+                    return `<div class="form-row">${common([
+                {label:'Date',key:'date',type:'date',required:true},
+                {label:'Symbol',key:'symbol',type:'text',required:true,placeholder:'AAPL, BTC...'},
+                {label:'Profit',key:'profit',type:'number',step:'0.01',placeholder:'0.00'},
+                {label:'Loss',key:'loss',type:'number',step:'0.01',placeholder:'0.00'}
+              ])}</div>`;
+                default:
+                    return '<p>Unknown type</p>';
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('open');
+        }
+
+        function modalSave() {
+            const type = modalContext.type;
+            const mode = modalContext.mode;
+            const body = document.getElementById('modalBody');
+            const inputs = body.querySelectorAll('input, select');
+            const record = {};
+            inputs.forEach(inp => {
+                const key = inp.dataset.field;
+                if (key) {
+                    let val = inp.value;
+                    if (inp.type === 'number') val = parseFloat(val) || 0;
+                    if (inp.type === 'date') val = val || '';
+                    record[key] = val;
+                }
+            });
+            if (!record.date && type !== 'loan') { toast('Date required', 'error'); return; }
+            if (type === 'transaction' && (!record.description || !record.amount || record.amount <= 0)) { toast(
+                    'Please fill all fields', 'error'); return; }
+            if (type === 'loan' && (!record.lender || !record.amount || !record.startDate || !record.endDate)) { toast(
+                    'Please fill all fields', 'error'); return; }
+            if (type === 'investment' && (!record.description || !record.investment || record.investment <= 0)) { toast(
+                    'Please fill all fields', 'error'); return; }
+            if (type === 'trading' && (!record.symbol || (record.profit === 0 && record.loss === 0))) { toast(
+                    'Please fill fields', 'error'); return; }
+
+            const editId = body.dataset.editId;
+            if (mode === 'edit' && editId) {
+                let arr = getArray(type);
+                const idx = arr.findIndex(item => item.id === editId);
+                if (idx !== -1) {
+                    record.id = arr[idx].id;
+                    if (type === 'loan') {
+                        record.repayments = arr[idx].repayments || [];
+                    }
+                    arr[idx] = record;
+                    toast('Updated');
+                } else {
+                    toast('Record not found', 'error');
+                    return;
+                }
+            } else {
+                record.id = randId();
+                if (type === 'loan') {
+                    record.repayments = [];
+                }
+                getArray(type).push(record);
+                toast('Added');
+            }
+            saveToLocal();
+            closeModal();
+            updateAll();
+        }
+
+        function getArray(type) {
+            switch (type) {
+                case 'transaction':
+                    return data.transactions;
+                case 'loan':
+                    return data.loans;
+                case 'investment':
+                    return data.investments;
+                case 'trading':
+                    return data.trading;
+                default:
+                    return [];
+            }
+        }
+
+        function capitalize(str) { return str.charAt(0).toUpperCase() + str.slice(1); }
+
+        function openAddModal(type) {
+            openModal(type, 'add', null);
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // EXPORT EXCEL
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        function exportExcel() {
+            try {
+                const wb = XLSX.utils.book_new();
+                // Transactions
+                const txData = data.transactions.map(t => ({ ...t }));
+                const ws1 = XLSX.utils.json_to_sheet(txData);
+                XLSX.utils.book_append_sheet(wb, ws1, 'Transactions');
+                // Loans with summary
+                const loanData = data.loans.map(l => {
+                    const s = getLoanSummary(l);
+                    return { ...l, totalRepaid: s.totalRepaid, remaining: s.remaining, interestAccrued: s.interest };
+                });
+                const ws2 = XLSX.utils.json_to_sheet(loanData);
+                XLSX.utils.book_append_sheet(wb, ws2, 'Loans');
+                // Investments
+                const invData = data.investments.map(t => ({ ...t }));
+                const ws3 = XLSX.utils.json_to_sheet(invData);
+                XLSX.utils.book_append_sheet(wb, ws3, 'Investments');
+                // Trading
+                const tradeData = data.trading.map(t => ({ ...t }));
+                const ws4 = XLSX.utils.json_to_sheet(tradeData);
+                XLSX.utils.book_append_sheet(wb, ws4, 'Trading');
+                // Summary
+                const stats = getTotalLoanStats();
+                const summary = [
+                    ['Metric', 'Value'],
+                    ['Total Income', data.transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)],
+                    ['Total Expenses', data.transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)],
+                    ['Net Balance', data.transactions.reduce((s, t) => s + (t.type === 'income' ? t.amount : -t.amount), 0)],
+                    ['Total Investments', data.investments.reduce((s, t) => s + t.investment, 0)],
+                    ['Total Returns', data.investments.reduce((s, t) => s + t.returns, 0)],
+                    ['Trading P&L', data.trading.reduce((s, t) => s + (t.profit - t.loss), 0)],
+                    ['Total Loan Amount', stats.totalAmount],
+                    ['Total Repaid', stats.totalRepaid],
+                    ['Remaining Balance', stats.totalRemaining],
+                    ['Interest Accrued', stats.totalInterest],
+                ];
+                const ws5 = XLSX.utils.aoa_to_sheet(summary);
+                XLSX.utils.book_append_sheet(wb, ws5, 'Summary');
+                XLSX.writeFile(wb, 'FinanceModel.xlsx');
+                toast('Excel exported');
+            } catch (e) { toast('Export failed: ' + e.message, 'error');
+                console.error(e); }
+        }
+
+        document.getElementById('modalOverlay').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+        document.getElementById('repayModalOverlay').addEventListener('click', function(e) {
+            if (e.target === this) closeRepayModal();
+        });
+
+        setTimeout(() => {
+            updateAll();
+        }, 200);
+    </script>
+</body>
+</html>
